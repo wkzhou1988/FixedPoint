@@ -2,6 +2,7 @@
 
 using System.Net;
 using FpMath;
+
 static bool CheckMulOverflow(long a, long b)
 {
     if (a == 0 || b == 0) return false;
@@ -9,39 +10,29 @@ static bool CheckMulOverflow(long a, long b)
     return true;
 }
 
-static bool CheckLeftShitOverflow(ulong a, int shift, bool negative)
+static bool CheckLeftShitOverflow(long a, int shift)
 {
-    Log.V(Convert.ToString((long)a, 2));
+    Log.V("Long a: " + Convert.ToString((long)a, 2));
     var leading = 0;
-    if (negative)
+    var b       = (ulong)(a < 0 ? ~a + 1 : a);
+
+    Log.V("Long b: " + Convert.ToString((long)b, 2));
+
+    while ((b & 0xF000000000000000) == 0)
     {
-        while ((a & 0x8000000000000000UL) == 0x8000000000000000UL)
-        {
-            a <<= 1;
-            leading++;
-        }
-    }
-    else
-    {
-        while ((a & 0x8000000000000000UL) == 0)
-        {
-            a <<= 1;
-            leading++;
-        }
+        leading +=  4;
+        b       <<= 4;
     }
 
-    leading -= 1;
-    Log.V($"leading {leading}");
+    while ((b & 0x8000000000000000) == 0)
+    {
+        leading +=  1;
+        b       <<= 1;
+    }
 
-    return leading < shift;
+    return shift > leading - 1;
 }
 
-Console.WriteLine("Hello, World!");
-
-Log.V(long.MaxValue);
-var a     = -15;
-var count = int.Parse(Console.ReadLine());
-var ret   = CheckLeftShitOverflow((ulong)a, count, a < 0);
-var c     = a << count;
-Log.V($"Overflow: {ret}");
-Log.V(c);
+var a = (Fp64)int.MaxValue;
+var b = a * a;
+Log.V((long)b);

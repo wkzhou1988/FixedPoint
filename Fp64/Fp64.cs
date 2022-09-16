@@ -47,12 +47,25 @@ public struct Fp64
 
     static bool CheckLeftShitOverflow(long a, int shift)
     {
-        var b = a << shift;
-        var c = a;
-        for (int i = 0; i < shift; i++)
-            c *= 2;
+        Log.V("Long a: " + Convert.ToString((long)a, 2));
+        var leading = 0;
+        var b       = (ulong)(a < 0 ? ~a + 1 : a);
 
-        return b != c;
+        Log.V("Long b: " + Convert.ToString((long)b, 2));
+
+        while ((b & 0xF000000000000000) == 0)
+        {
+            leading +=  4;
+            b       <<= 4;
+        }
+
+        while ((b & 0x8000000000000000) == 0)
+        {
+            leading +=  1;
+            b       <<= 1;
+        }
+
+        return shift > leading - 1;
     }
 
     public static Fp64 operator +(Fp64 a, Fp64 b)
@@ -76,7 +89,7 @@ public struct Fp64
 
         AssertOverflow(CheckMulOverflow((long)alo, (long)blo));
 
-        var lolo = (alo * blo) >> SHIFT;
+        var lolo = (long)((alo * blo) >> SHIFT);
 
         AssertOverflow(CheckMulOverflow(ahi, (long)blo));
 
@@ -86,11 +99,19 @@ public struct Fp64
         var lohi = (long)alo * bhi;
 
         AssertOverflow(CheckMulOverflow(ahi, bhi));
-        var hihi = (ulong)((ahi * bhi) << SHIFT);
+        AssertOverflow(CheckLeftShitOverflow(ahi * bhi, SHIFT));
+        var hihi = (ahi * bhi) << SHIFT;
 
-        // var sum = lolo + hilo + lohi + hihi;
+        var sum = lolo;
 
-        return new Fp64(1);
+        AssertOverflow(CheckAddOverflow(sum, hilo));
+        sum += hilo;
+        AssertOverflow(CheckAddOverflow(sum, lohi));
+        sum += lohi;
+        AssertOverflow(CheckAddOverflow(sum, hihi));
+        sum += hihi;
+
+        return new Fp64(sum);
     }
 
     public static explicit operator Fp64(int i)
